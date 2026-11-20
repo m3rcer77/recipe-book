@@ -2,9 +2,14 @@
 from sqlalchemy import select
 
 from app import models
+from app.core.security import hash_password
 from app.db.session import SessionLocal
 
 CATEGORIES = ["Завтраки", "Обеды", "Ужины", "Десерты"]
+
+# Демо-аккаунт для проверки входа
+DEMO_EMAIL = "ivan@example.com"
+DEMO_PASSWORD = "Password123"
 
 # (название, категория, минут, сложность, ккал, emoji, описание, ингредиенты «название — количество», шаги)
 RECIPES = [
@@ -41,6 +46,17 @@ def seed() -> None:
             print("В базе уже есть данные — пропускаю.")
             return
 
+        # Демо-аккаунт администратора (пароль хранится в БД только в виде хеша)
+        user = models.User(
+            username="Иван",
+            email=DEMO_EMAIL,
+            password_hash=hash_password(DEMO_PASSWORD),
+            is_admin=True,
+            bio="Люблю простые домашние блюда",
+        )
+        db.add(user)
+        db.flush()
+
         categories = {name: models.Category(name=name) for name in CATEGORIES}
         db.add_all(categories.values())
         ingredients: dict[str, models.Ingredient] = {}
@@ -56,20 +72,19 @@ def seed() -> None:
                 links.append(models.RecipeIngredient(ingredient=ingredient, quantity=quantity))
             recipe = models.Recipe(
                 title=title, description=description, emoji=emoji, cooking_time_minutes=minutes,
-                difficulty=difficulty, calories=kcal, category=categories[cat], ingredients=links,
+                difficulty=difficulty, calories=kcal, category=categories[cat], author_id=user.id, ingredients=links,
                 steps=[models.RecipeStep(position=n, text=t) for n, t in enumerate(steps, start=1)],
             )
             recipes.append(recipe)
         db.add_all(recipes)
 
-        user = models.User(username="Иван", bio="Люблю простые домашние блюда")
-        db.add(user)
         db.flush()
         # как на экране «Избранное» во frontend — первые два рецепта
         for recipe in recipes[:2]:
             db.add(models.Favorite(user_id=user.id, recipe_id=recipe.id))
         db.commit()
         print("Демо-данные добавлены: 4 категории, 4 рецепта, пользователь «Иван» с 2 избранными.")
+        print(f"Демо-аккаунт (администратор): {DEMO_EMAIL} / {DEMO_PASSWORD}")
 
 
 if __name__ == "__main__":

@@ -94,6 +94,7 @@ class RecipeRead(BaseModel):
     difficulty: str
     calories: int | None = None
     created_at: datetime
+    author_id: int | None = None
     category: CategoryRead
     ingredients: list[IngredientOut] = []
     steps: list[str] = []

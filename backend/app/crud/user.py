@@ -4,11 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.crud import recipe as recipe_crud
 from app.models import Favorite, Recipe, User
-from app.schemas import UserCreate, UserUpdate
-
-
-def list_users(db: Session) -> list[User]:
-    return list(db.scalars(select(User).order_by(User.id)))
+from app.schemas import UserUpdate
 
 
 def get_user(db: Session, user_id: int) -> User:
@@ -24,14 +20,6 @@ def _ensure_username_free(db: Session, username: str, exclude_id: int | None = N
         stmt = stmt.where(User.id != exclude_id)
     if db.scalar(stmt) is not None:
         raise ConflictError(f"Имя пользователя «{username}» уже занято")
-
-
-def create_user(db: Session, data: UserCreate) -> User:
-    _ensure_username_free(db, data.username)
-    user = User(**data.model_dump())
-    db.add(user)
-    db.commit()
-    return user
 
 
 def update_user(db: Session, user_id: int, data: UserUpdate) -> User:

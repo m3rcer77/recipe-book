@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_admin
 from app.crud import category as crud
 from app.db.session import get_db
+from app.models import User
 from app.schemas import CategoryCreate, CategoryRead, CategoryUpdate
 
 router = APIRouter(prefix="/categories", tags=["Категории"])
@@ -14,7 +16,7 @@ def list_categories(db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
-def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
+def create_category(data: CategoryCreate, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     return crud.create_category(db, data)
 
 
@@ -24,11 +26,13 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{category_id}", response_model=CategoryRead)
-def update_category(category_id: int, data: CategoryUpdate, db: Session = Depends(get_db)):
+def update_category(
+    category_id: int, data: CategoryUpdate, _: User = Depends(require_admin), db: Session = Depends(get_db)
+):
     return crud.update_category(db, category_id, data)
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_category(category_id: int, db: Session = Depends(get_db)):
+def delete_category(category_id: int, _: User = Depends(require_admin), db: Session = Depends(get_db)):
     crud.delete_category(db, category_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,9 +1,9 @@
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError
 from app.crud import ingredient as ingredient_crud
-from app.models import Category, Recipe, RecipeIngredient, RecipeStep
+from app.models import Category, Recipe, RecipeIngredient, RecipeStep, User
 from app.schemas import RecipeCreate, RecipeUpdate
 from app.schemas.recipe import IngredientIn
 
@@ -40,6 +40,12 @@ def get_recipe(db: Session, recipe_id: int) -> Recipe:
     return recipe
 
 
+def _ensure_can_modify(recipe: Recipe, user: User) -> None:
+    """Менять и удалять рецепт может его автор или администратор."""
+    if recipe.author_id != user.id and not user.is_admin:
+        raise ForbiddenError("Изменять и удалять рецепт может только его автор")
+
+
 def _check_category(db: Session, category_id: int) -> None:
     if db.get(Category, category_id) is None:
         raise BadRequestError(f"Категория с id={category_id} не существует")
@@ -55,9 +61,9 @@ def _build_steps(steps: list[str]) -> list[RecipeStep]:
     return [RecipeStep(position=n, text=text) for n, text in enumerate(steps, start=1)]
 
 
-def create_recipe(db: Session, data: RecipeCreate) -> Recipe:
+def create_recipe(db: Session, data: RecipeCreate, author: User) -> Recipe:
     _check_category(db, data.category_id)
-    recipe = Recipe(**data.model_dump(exclude={"ingredients", "steps"}))
+    recipe = Recipe(**data.model_dump(exclude={"ingredients", "steps"}), author_id=author.id)
     recipe.ingredients = _build_ingredients(db, data.ingredients)
     recipe.steps = _build_steps(data.steps)
     db.add(recipe)
@@ -66,8 +72,9 @@ def create_recipe(db: Session, data: RecipeCreate) -> Recipe:
     return get_recipe(db, recipe.id)
 
 
-def update_recipe(db: Session, recipe_id: int, data: RecipeUpdate) -> Recipe:
+def update_recipe(db: Session, recipe_id: int, data: RecipeUpdate, user: User) -> Recipe:
     recipe = get_recipe(db, recipe_id)
+    _ensure_can_modify(recipe, user)
     changes = data.model_dump(exclude_unset=True, exclude={"ingredients", "steps"})
 
     for required in ("title", "description", "emoji", "cooking_time_minutes", "difficulty", "category_id"):
@@ -96,7 +103,8 @@ def update_recipe(db: Session, recipe_id: int, data: RecipeUpdate) -> Recipe:
     return get_recipe(db, recipe_id)
 
 
-def delete_recipe(db: Session, recipe_id: int) -> None:
+def delete_recipe(db: Session, recipe_id: int, user: User) -> None:
     recipe = get_recipe(db, recipe_id)
+    _ensure_can_modify(recipe, user)
     db.delete(recipe)  # ингредиенты, шаги и записи избранного удаляются каскадом
     db.commit()

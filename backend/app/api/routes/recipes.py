@@ -3,8 +3,10 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.crud import recipe as crud
 from app.db.session import get_db
+from app.models import User
 from app.schemas import RecipeCreate, RecipeRead, RecipeUpdate
 
 router = APIRouter(prefix="/recipes", tags=["Рецепты"])
@@ -23,8 +25,9 @@ def list_recipes(
 
 
 @router.post("", response_model=RecipeRead, status_code=status.HTTP_201_CREATED)
-def create_recipe(data: RecipeCreate, db: Session = Depends(get_db)):
-    return crud.create_recipe(db, data)
+def create_recipe(data: RecipeCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Приватный маршрут: рецепт создаётся от имени текущего пользователя (он становится автором)."""
+    return crud.create_recipe(db, data, user)
 
 
 @router.get("/{recipe_id}", response_model=RecipeRead)
@@ -33,11 +36,15 @@ def get_recipe(recipe_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{recipe_id}", response_model=RecipeRead)
-def update_recipe(recipe_id: int, data: RecipeUpdate, db: Session = Depends(get_db)):
-    return crud.update_recipe(db, recipe_id, data)
+def update_recipe(
+    recipe_id: int, data: RecipeUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Приватный маршрут: только автор рецепта или администратор."""
+    return crud.update_recipe(db, recipe_id, data, user)
 
 
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_recipe(recipe_id: int, db: Session = Depends(get_db)):
-    crud.delete_recipe(db, recipe_id)
+def delete_recipe(recipe_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Приватный маршрут: только автор рецепта или администратор."""
+    crud.delete_recipe(db, recipe_id, user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

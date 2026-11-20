@@ -5,7 +5,7 @@ from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 
-app = FastAPI(title="Recipe Book API", version="0.2.0", description="Backend для приложения «Книга рецептов» (лабораторная работа №2)")
+app = FastAPI(title="Recipe Book API", version="0.4.0", description="Backend для приложения «Книга рецептов» (лабораторные работы №2 и №4: аутентификация и авторизация)")
 
 app.add_middleware(
     CORSMiddleware,
