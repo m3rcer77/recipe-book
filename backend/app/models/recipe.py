@@ -24,6 +24,8 @@ class Recipe(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"))
+    # Автор рецепта: только он (и администратор) может менять и удалять рецепт
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
 
     category: Mapped["Category"] = relationship(back_populates="recipes")  # noqa: F821
     ingredients: Mapped[list["RecipeIngredient"]] = relationship(
