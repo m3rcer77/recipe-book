@@ -4,10 +4,13 @@ import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded'
 import FavoriteBorderRoundedIcon from '@mui/icons-material/FavoriteBorderRounded'
 import PersonOutlineRoundedIcon from '@mui/icons-material/PersonOutlineRounded'
 import { useRecipes } from '../../entities/recipe/model/RecipesContext'
+import { useAuth } from '../../entities/session/model/AuthContext'
+import { LogoutButton } from '../../features/auth/ui/LogoutButton'
 import { useFavorites } from '../../features/favorites/model/FavoritesContext'
 
 export function Layout() {
   const { recipes } = useRecipes()
+  const { status, user } = useAuth()
   const { ids } = useFavorites()
   const favoritesCount = recipes.filter((r) => ids.includes(r.id)).length
 
@@ -40,13 +43,22 @@ export function Layout() {
               </Button>
             ))}
           </Box>
-          <Button component={NavLink} to="/profile" className="profile-button" startIcon={<PersonOutlineRoundedIcon />}>
-            Профиль
-          </Button>
+          {status === 'authenticated' && user ? (
+            <>
+              <Button component={NavLink} to="/profile" className="profile-button" startIcon={<PersonOutlineRoundedIcon />}>
+                {user.username}
+              </Button>
+              <LogoutButton />
+            </>
+          ) : (
+            <Button component={NavLink} to="/login" variant="contained" className="login-button" disabled={status === 'loading'}>
+              Войти
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
       <main><Container maxWidth="lg"><Outlet /></Container></main>
-      <footer className="footer"><Container maxWidth="lg">Книга рецептов · Лабораторная работа №3</Container></footer>
+      <footer className="footer"><Container maxWidth="lg">Книга рецептов · Лабораторная работа №4</Container></footer>
     </>
   )
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Box, Button, Typography } from '@mui/material'
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import { useToast } from '../../shared/ui/ToastProvider'
+import { useRequireAuth } from '../../entities/session/model/useRequireAuth'
 import { useRecipes } from '../../entities/recipe/model/RecipesContext'
 import type { RecipeInput } from '../../entities/recipe/model/types'
 import { RecipeList } from '../../features/recipe-list/ui/RecipeList'
@@ -17,6 +18,7 @@ export function RecipesPage() {
   const { recipes, status, error, reload, createRecipe } = useRecipes()
   const { filters, setQuery, setCategory, setDifficulty, isActive, reset } = useRecipeFilters()
   const toast = useToast()
+  const requireAuth = useRequireAuth()
   const [formOpen, setFormOpen] = useState(false)
 
   const filtered = useMemo(() => filterRecipes(recipes, filters), [recipes, filters])
@@ -27,7 +29,7 @@ export function RecipesPage() {
     toast('Рецепт добавлен')
   }
 
-  const openForm = () => setFormOpen(true)
+  const openForm = () => requireAuth(() => setFormOpen(true))
 
   return (
     <div className="page">

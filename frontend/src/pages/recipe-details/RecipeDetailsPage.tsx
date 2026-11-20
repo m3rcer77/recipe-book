@@ -13,6 +13,7 @@ import { useToast } from '../../shared/ui/ToastProvider'
 import { getErrorMessage } from '../../shared/lib/errors'
 import { formatMinutes } from '../../shared/lib/format'
 import { useRecipes } from '../../entities/recipe/model/RecipesContext'
+import { useRequireAuth } from '../../entities/session/model/useRequireAuth'
 import type { Recipe, RecipeInput } from '../../entities/recipe/model/types'
 import { FavoriteButton } from '../../features/favorites/ui/FavoriteButton'
 import { RecipeFormDialog } from '../../features/recipe-form/ui/RecipeFormDialog'
@@ -48,6 +49,7 @@ export function RecipeDetailsPage() {
 function RecipeContent({ recipe }: { recipe: Recipe }) {
   const navigate = useNavigate()
   const toast = useToast()
+  const requireAuth = useRequireAuth()
   const { updateRecipe, deleteRecipe } = useRecipes()
   const [editOpen, setEditOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -92,8 +94,8 @@ function RecipeContent({ recipe }: { recipe: Recipe }) {
           </Stack>
           <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
             <FavoriteButton recipeId={recipe.id} variant="button" />
-            <Button variant="outlined" startIcon={<EditRoundedIcon />} onClick={() => setEditOpen(true)}>Редактировать</Button>
-            <Button variant="outlined" color="error" startIcon={<DeleteOutlineRoundedIcon />} onClick={() => setConfirmOpen(true)}>Удалить</Button>
+            <Button variant="outlined" startIcon={<EditRoundedIcon />} onClick={() => requireAuth(() => setEditOpen(true))}>Редактировать</Button>
+            <Button variant="outlined" color="error" startIcon={<DeleteOutlineRoundedIcon />} onClick={() => requireAuth(() => setConfirmOpen(true))}>Удалить</Button>
           </Stack>
         </div>
       </section>

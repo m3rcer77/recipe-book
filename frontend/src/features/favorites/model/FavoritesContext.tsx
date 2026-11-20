@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadJson, saveJson } from '../../../shared/lib/storage'
+import { useAuth } from '../../../entities/session/model/AuthContext'
 
 type FavoritesContextValue = {
   ids: number[]
@@ -8,20 +9,30 @@ type FavoritesContextValue = {
   toggle: (recipeId: number) => void
 }
 
-const STORAGE_KEY = 'recipe-book:favorites'
-/** Начальное избранное для демонстрации (как на экране из лабораторной №1). */
-const DEFAULT_IDS = [1, 2]
+/** Избранное хранится отдельно для каждого пользователя: после смены аккаунта списки не смешиваются. */
+const storageKey = (userId: number) => `recipe-book:favorites:${userId}`
 
 const FavoritesContext = createContext<FavoritesContextValue | null>(null)
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-  const [ids, setIds] = useState<number[]>(() => loadJson<number[]>(STORAGE_KEY, DEFAULT_IDS))
+  const { user } = useAuth()
+  const userId = user?.id ?? null
+  const [ids, setIds] = useState<number[]>([])
 
-  useEffect(() => saveJson(STORAGE_KEY, ids), [ids])
+  // Вход, выход или смена пользователя: загружаем его список (или пустой, если не вошли)
+  useEffect(() => {
+    setIds(userId === null ? [] : loadJson<number[]>(storageKey(userId), []))
+  }, [userId])
 
-  const toggle = useCallback((recipeId: number) => {
-    setIds((prev) => (prev.includes(recipeId) ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]))
-  }, [])
+  const toggle = useCallback(
+    (recipeId: number) => {
+      if (userId === null) return
+      const next = ids.includes(recipeId) ? ids.filter((id) => id !== recipeId) : [...ids, recipeId]
+      setIds(next)
+      saveJson(storageKey(userId), next)
+    },
+    [ids, userId],
+  )
 
   const value = useMemo<FavoritesContextValue>(
     () => ({ ids, isFavorite: (recipeId) => ids.includes(recipeId), toggle }),

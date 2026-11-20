@@ -6,23 +6,30 @@ import RestaurantRoundedIcon from '@mui/icons-material/RestaurantRounded'
 import { useToast } from '../../shared/ui/ToastProvider'
 import { demoApi } from '../../entities/recipe/api/demoApi'
 import { useRecipes } from '../../entities/recipe/model/RecipesContext'
+import { useAuth } from '../../entities/session/model/AuthContext'
 import { useUser } from '../../entities/user/model/UserContext'
 import type { Units } from '../../entities/user/model/UserContext'
+import { LogoutButton } from '../../features/auth/ui/LogoutButton'
+import type { ProfileValues } from '../../features/profile-edit/model/validation'
 import { useFavorites } from '../../features/favorites/model/FavoritesContext'
 import { ProfileEditDialog } from '../../features/profile-edit/ui/ProfileEditDialog'
 
 export function ProfilePage() {
-  const { profile, settings, updateProfile, updateSettings } = useUser()
+  const { user, updateProfile } = useAuth()
+  const { settings, updateSettings } = useUser()
   const { recipes, reload } = useRecipes()
   const { ids } = useFavorites()
   const toast = useToast()
   const [editOpen, setEditOpen] = useState(false)
   const [simulateFailure, setSimulateFailure] = useState(demoApi.isFailMode())
 
+  if (!user) return null // страница приватная: сюда попадают только после входа
+
   const savedCount = recipes.filter((r) => ids.includes(r.id)).length
 
-  const handleSave = (next: { name: string; bio: string }) => {
-    updateProfile(next)
+  // Профиль сохраняется на сервере (PATCH /users/{id}, приватный маршрут)
+  const handleSave = async (values: ProfileValues) => {
+    await updateProfile({ username: values.username, bio: values.bio })
     setEditOpen(false)
     toast('Профиль обновлён')
   }
@@ -48,13 +55,17 @@ export function ProfilePage() {
     <div className="page profile-page">
       <Box className="profile-top">
         <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar className="profile-avatar">{profile.name.trim().charAt(0).toUpperCase() || '?'}</Avatar>
+          <Avatar className="profile-avatar">{user.username.trim().charAt(0).toUpperCase() || '?'}</Avatar>
           <div>
-            <Typography variant="h2">{profile.name}</Typography>
-            <Typography className="muted">{profile.bio || 'Расскажите о себе'}</Typography>
+            <Typography variant="h2">{user.username}</Typography>
+            <Typography className="muted">{user.email}</Typography>
+            <Typography className="muted">{user.bio || 'Расскажите о себе'}</Typography>
           </div>
         </Stack>
-        <Button variant="outlined" startIcon={<EditRoundedIcon />} onClick={() => setEditOpen(true)}>Редактировать</Button>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" startIcon={<EditRoundedIcon />} onClick={() => setEditOpen(true)}>Редактировать</Button>
+          <LogoutButton variant="outlined" />
+        </Stack>
       </Box>
 
       <div className="stats-grid">
@@ -96,7 +107,7 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
-      <ProfileEditDialog open={editOpen} initial={profile} onClose={() => setEditOpen(false)} onSave={handleSave} />
+      <ProfileEditDialog open={editOpen} initial={{ username: user.username, bio: user.bio ?? '' }} onClose={() => setEditOpen(false)} onSave={handleSave} />
     </div>
   )
 }

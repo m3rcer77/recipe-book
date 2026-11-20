@@ -2,6 +2,7 @@ import { Button, IconButton } from '@mui/material'
 import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded'
 import FavoriteBorderRoundedIcon from '@mui/icons-material/FavoriteBorderRounded'
 import { useToast } from '../../../shared/ui/ToastProvider'
+import { useRequireAuth } from '../../../entities/session/model/useRequireAuth'
 import { useFavorites } from '../model/FavoritesContext'
 
 type Props = {
@@ -13,12 +14,14 @@ type Props = {
 export function FavoriteButton({ recipeId, variant = 'icon' }: Props) {
   const { isFavorite, toggle } = useFavorites()
   const toast = useToast()
+  const requireAuth = useRequireAuth()
   const active = isFavorite(recipeId)
 
-  const handleClick = () => {
-    toggle(recipeId)
-    toast(active ? 'Удалено из избранного' : 'Добавлено в избранное', 'info')
-  }
+  const handleClick = () =>
+    requireAuth(() => {
+      toggle(recipeId)
+      toast(active ? 'Удалено из избранного' : 'Добавлено в избранное', 'info')
+    })
 
   const icon = active ? <FavoriteRoundedIcon /> : <FavoriteBorderRoundedIcon />
   const className = active ? 'fav-btn active' : 'fav-btn'
